@@ -1,79 +1,101 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:form_validator/form_validator.dart';
 import 'package:new_shop/login/bloc/login_bloc.dart';
 import 'package:new_shop/login/request/login_request.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class CustomLoginScreen extends StatefulWidget {
+  const CustomLoginScreen({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  _CustomLoginScreenState createState() => _CustomLoginScreenState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  TextEditingController? emailController =
-      TextEditingController(text: 'ppa@ppa.com');
-  TextEditingController? passwordController =
-      TextEditingController(text: 'password');
-  GlobalKey<FormState> _form = GlobalKey<FormState>();
+class _CustomLoginScreenState extends State<CustomLoginScreen> {
+  final FocusNode _usernameFocusNode = FocusNode();
+  final FocusNode _passwordFocusNode = FocusNode();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  bool? _validate() {
-    return _form.currentState?.validate();
-  }
+  bool _isUsernameFocused = false;
+  bool _isPasswordFocused = false;
 
   @override
   void initState() {
     super.initState();
-    //add event to login bloc
+    _usernameFocusNode.addListener(() {
+      setState(() {
+        _isUsernameFocused = _usernameFocusNode.hasFocus;
+      });
+    });
+
+    _passwordFocusNode.addListener(() {
+      setState(() {
+        _isPasswordFocused = _passwordFocusNode.hasFocus;
+      });
+    });
+
     context.read<LoginBloc>().add(SystemCheckTokenEvent());
   }
 
   @override
   void dispose() {
-    emailController!.dispose();
-    passwordController!.dispose();
+    _usernameFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  bool? _validate() {
+    return _formKey.currentState?.validate();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
       body: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(20),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Image.asset(
+              'assets/Login.png',
+              height: 100,
+            ),
+            const SizedBox(height: 20),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(
+                  'Login',
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             BlocConsumer<LoginBloc, LoginState>(
               listener: (context, state) {
-                //if state is LoginSuccess then navigate to /home
                 if (state is LoginSuccess) {
                   Navigator.of(context).pushNamed('/home');
                 }
               },
               builder: (context, state) {
-                if (state is LoginInitial) {
-                  //add textformfield for name, email, password
-                  return LoginForm(
-                      form: _form,
-                      emailController: emailController,
-                      passwordController: passwordController);
-                }
-                //if state is login loading then show loading
                 if (state is LoginLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const Center(child: CircularProgressIndicator());
                 }
                 return LoginForm(
-                  form: _form,
-                  emailController: emailController,
-                  passwordController: passwordController,
+                  formKey: _formKey,
+                  emailController: _emailController,
+                  passwordController: _passwordController,
+                  isUsernameFocused: _isUsernameFocused,
+                  isPasswordFocused: _isPasswordFocused,
+                  usernameFocusNode: _usernameFocusNode,
+                  passwordFocusNode: _passwordFocusNode,
                 );
               },
             ),
@@ -94,12 +116,11 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         onPressed: () {
                           if (_validate() != null && _validate()!) {
-                            //call user tap login button event
                             context.read<LoginBloc>().add(
                                   UserTapLoginButtonEvent(
                                     request: LoginRequest(
-                                      email: emailController!.text,
-                                      password: passwordController!.text,
+                                      email: _emailController.text,
+                                      password: _passwordController.text,
                                     ),
                                   ),
                                 );
@@ -108,12 +129,37 @@ class _LoginPageState extends State<LoginPage> {
                         child: const Text('Login'),
                       ),
                     ),
-                    //add text button for register
-                    TextButton(
-                      onPressed: () {
-                        _navigateAndWaitForResult(context);
-                      },
-                      child: const Text('Register'),
+                    const SizedBox(height: 25),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () {
+                              _navigateAndWaitForResult(context);
+                            },
+                            child: const Text(
+                              'Register',
+                              style: TextStyle(color: Colors.black),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          height: 25,
+                          width: 1.5,
+                          color: Colors.grey,
+                        ),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () {
+                              // Add Forgot Password functionality here
+                            },
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(color: Colors.black),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 );
@@ -126,12 +172,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _navigateAndWaitForResult(BuildContext context) async {
-    //await for navigator push named
     final result = await Navigator.of(context).pushNamed('/register');
     if (!context.mounted) return;
 
-    // After the Selection Screen returns a result, hide any previous snackbars
-    // and show the new result.
     if (result != null) {
       ScaffoldMessenger.of(context)
         ..removeCurrentSnackBar()
@@ -141,7 +184,6 @@ class _LoginPageState extends State<LoginPage> {
             action: SnackBarAction(
               label: 'Close',
               onPressed: () {
-                // Code to execute when the action is pressed
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
               },
             ),
@@ -154,44 +196,56 @@ class _LoginPageState extends State<LoginPage> {
 class LoginForm extends StatelessWidget {
   const LoginForm({
     super.key,
-    required GlobalKey<FormState> form,
+    required this.formKey,
     required this.emailController,
     required this.passwordController,
-  }) : _form = form;
+    required this.isUsernameFocused,
+    required this.isPasswordFocused,
+    required this.usernameFocusNode,
+    required this.passwordFocusNode,
+  });
 
-  final GlobalKey<FormState> _form;
-  final TextEditingController? emailController;
-  final TextEditingController? passwordController;
+  final GlobalKey<FormState> formKey;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final bool isUsernameFocused;
+  final bool isPasswordFocused;
+  final FocusNode usernameFocusNode;
+  final FocusNode passwordFocusNode;
 
   @override
   Widget build(BuildContext context) {
     return Form(
-      key: _form,
+      key: formKey,
       child: Column(
         children: [
           TextFormField(
-            decoration: const InputDecoration(
+            focusNode: usernameFocusNode,
+            decoration: InputDecoration(
               labelText: 'Email',
-              border: OutlineInputBorder(),
+              labelStyle: TextStyle(
+                color: isUsernameFocused ? Colors.blue : Colors.grey,
+              ),
+              border: const OutlineInputBorder(),
             ),
             validator: ValidationBuilder().email().build(),
             controller: emailController,
           ),
-          const SizedBox(
-            height: 10,
-          ),
+          const SizedBox(height: 20),
           TextFormField(
-            decoration: const InputDecoration(
+            focusNode: passwordFocusNode,
+            decoration: InputDecoration(
               labelText: 'Password',
-              border: OutlineInputBorder(),
+              labelStyle: TextStyle(
+                color: isPasswordFocused ? Colors.blue : Colors.grey,
+              ),
+              border: const OutlineInputBorder(),
             ),
             obscureText: true,
-            controller: passwordController,
             validator: ValidationBuilder().minLength(5).maxLength(50).build(),
+            controller: passwordController,
           ),
-          const SizedBox(
-            height: 10,
-          ),
+          const SizedBox(height: 20),
         ],
       ),
     );

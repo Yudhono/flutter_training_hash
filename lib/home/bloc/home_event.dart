@@ -8,3 +8,5 @@ sealed class HomeEvent extends Equatable {
 }
 
 final class UserTapLogoutButton extends HomeEvent {}
+
+final class LoadProfile extends HomeEvent {}

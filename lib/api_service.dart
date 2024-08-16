@@ -20,8 +20,8 @@ class APIService {
     DioMethod method, {
     Map<String, dynamic>? param,
     String? contentType,
-    formData,
-    Map<String, String>? headers, // Step 1: Add headers parameter
+    dynamic data, // Accept either param or formData
+    Map<String, String>? headers,
   }) async {
     try {
       final dio = Dio(
@@ -29,17 +29,16 @@ class APIService {
           baseUrl: baseUrl,
           contentType: contentType ?? Headers.formUrlEncodedContentType,
           headers: {
-            // Default headers
-            // HttpHeaders.authorizationHeader: 'Bearer $token',
-            if (headers != null) ...headers, // Step 2: Merge custom headers
+            if (headers != null) ...headers,
           },
         ),
       );
+
       switch (method) {
         case DioMethod.post:
           return dio.post(
             endpoint,
-            data: param ?? formData,
+            data: data ?? param,
           );
         case DioMethod.get:
           return dio.get(
@@ -49,17 +48,17 @@ class APIService {
         case DioMethod.put:
           return dio.put(
             endpoint,
-            data: param ?? formData,
+            data: data ?? param,
           );
         case DioMethod.delete:
           return dio.delete(
             endpoint,
-            data: param ?? formData,
+            data: data ?? param,
           );
         default:
           return dio.post(
             endpoint,
-            data: param ?? formData,
+            data: data ?? param,
           );
       }
     } catch (e) {
